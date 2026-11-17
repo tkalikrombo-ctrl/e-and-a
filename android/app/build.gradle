@@ -9,8 +9,8 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Fixed, non-null values: dynamic version injection via env/property caused a null-value
         // failure while AGP evaluated this module on CI.
-        versionCode 2
-        versionName "1.2.0"
+        versionCode 3
+        versionName "1.3.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

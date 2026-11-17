@@ -20,6 +20,7 @@ import {
   Home,
   LockKeyhole,
   LogOut,
+  Languages,
   Menu,
   Mic,
   RotateCcw,
@@ -33,8 +34,9 @@ import {
 } from 'lucide-react'
 import './App.css'
 import './learning-progress.css'
+import Dictionary from './Dictionary'
 
-type Section = 'today' | 'path' | 'progress'
+type Section = 'today' | 'path' | 'dictionary' | 'progress'
 type LocalTrainee = { name: string; email: string; salt: string; verifier: string }
 type LessonSchedule = { id: string; notificationId?: number; lessonId: string; weekday: number; time: string; duration: number }
 type LearningSession = { lessonId: string; completedAt: string; elapsedSeconds: number }
@@ -354,6 +356,7 @@ const featuredLessons = lessons.slice(0, 4)
 const navItems: { id: Section; label: string; icon: typeof Home }[] = [
   { id: 'today', label: 'الرئيسية', icon: Home },
   { id: 'path', label: 'مسارات التعلّم', icon: BookOpen },
+  { id: 'dictionary', label: 'القاموس', icon: Languages },
   { id: 'progress', label: 'تقدّمي', icon: BarChart3 },
 ]
 
@@ -744,8 +747,18 @@ function App() {
     window.speechSynthesis.cancel()
     const lesson = focusSession ? sessionLesson : selectedLesson
     const utterance = new SpeechSynthesisUtterance(lesson.sentence)
-    utterance.lang = 'en-US'
-    utterance.rate = 0.88
+    const voices = window.speechSynthesis.getVoices()
+    const preferredVoiceUri = storedValue('eanda-speech-voice', '')
+    const preferredVoice = voices.find((voice) => voice.voiceURI === preferredVoiceUri && /^en(-|_)/i.test(voice.lang))
+    const voice = preferredVoice ?? voices.find((item) => /^en-US/i.test(item.lang)) ?? voices.find((item) => /^en(-|_)/i.test(item.lang))
+    if (!voice) {
+      setFeedback('لم يظهر صوت إنجليزي مثبت. افتح القاموس لتنزيل صوت من إعدادات جهازك.')
+      return
+    }
+    utterance.voice = voice
+    utterance.lang = voice.lang
+    const savedRate = storedValue('eanda-speech-rate', 0.9)
+    utterance.rate = [0.75, 0.9, 1].includes(savedRate) ? savedRate : 0.9
     window.speechSynthesis.speak(utterance)
   }
 
@@ -792,7 +805,7 @@ function App() {
   }
 
   const LessonIcon = focusSession ? sessionLesson.icon : selectedLesson.icon
-  const pageTitle = section === 'today' ? 'مساحة التعلّم' : section === 'path' ? 'مسارات التخصص' : 'لوحة التقدّم'
+  const pageTitle = section === 'today' ? 'مساحة التعلّم' : section === 'path' ? 'مسارات التخصص' : section === 'dictionary' ? 'قاموس الترجمة' : 'لوحة التقدّم'
 
   if (!termsAccepted) return <TermsScreen onAccept={acceptTerms} />
   if (!profile || !isAuthenticated) return <TraineeAccess profileExists={Boolean(profile)} onCreate={registerTrainee} onLogin={loginTrainee} />
@@ -873,6 +886,8 @@ function App() {
             {filteredLessons.length === 0 && <p className="empty-category">لا توجد مسارات في هذا التصنيف بعد.</p>}
             <section className="selected-lesson-panel"><div><span className="section-kicker">{selectedLesson.categoryLabel} · المستوى {selectedLesson.level}{selectedLesson.intensive ? ' · درس مكثف' : ''}</span><h2>{selectedLesson.task}</h2><p>{selectedLesson.translation}</p><div className="skill-pills"><span>فهم السياق</span><span>كتابة أكاديمية</span><span>تحدث</span></div></div><button className="primary-button" onClick={() => startFocusSession()}>ابدأ الوحدة <ArrowUpRight size={16} /></button></section>
           </div>
+        ) : section === 'dictionary' ? (
+          <Dictionary />
         ) : (
           <div className="page-content inner-page progress-page">
             <div className="inner-page-heading"><span className="section-kicker">تقدّم مبني على جلساتك</span><h1>تقدّمك يتكلم.</h1><p>هذه الإحصاءات من الجلسات التي أكملتها والمحفوظة على هذا الجهاز.</p></div>

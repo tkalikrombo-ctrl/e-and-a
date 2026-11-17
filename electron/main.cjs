@@ -1,5 +1,5 @@
 const path = require('node:path')
-const { app, BrowserWindow } = require('electron')
+const { app, BrowserWindow, shell } = require('electron')
 
 function createWindow() {
   const window = new BrowserWindow({
@@ -15,7 +15,12 @@ function createWindow() {
     },
   })
 
-  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https://') || url === 'ms-settings:speech') {
+      void shell.openExternal(url).catch((error) => console.error('Could not open external settings link:', error))
+    }
+    return { action: 'deny' }
+  })
   void window.loadFile(path.join(__dirname, '..', 'dist', 'index.html'))
 }
 
