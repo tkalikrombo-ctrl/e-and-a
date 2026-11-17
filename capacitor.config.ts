@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
   appId: 'com.a3e1.misenglish',
-  appName: 'A3&E1',
+  appName: 'E&A',
   webDir: 'dist',
   plugins: {
     LocalNotifications: {

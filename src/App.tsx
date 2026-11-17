@@ -32,13 +32,27 @@ import {
   X,
 } from 'lucide-react'
 import './App.css'
+import './learning-progress.css'
 
 type Section = 'today' | 'path' | 'progress'
 type LocalTrainee = { name: string; email: string; salt: string; verifier: string }
 type LessonSchedule = { id: string; notificationId?: number; lessonId: string; weekday: number; time: string; duration: number }
+type LearningSession = { lessonId: string; completedAt: string; elapsedSeconds: number }
 
 const TERMS_VERSION = '2026-10-v2'
 const weekdayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
+const weekdayInitials = ['ح', 'ن', 'ث', 'ر', 'خ', 'ج', 'س']
+
+function localDateKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function localDayOffset(date: Date, offset: number) {
+  const day = new Date(date)
+  day.setHours(0, 0, 0, 0)
+  day.setDate(day.getDate() + offset)
+  return day
+}
 
 function bytesToBase64(bytes: Uint8Array) {
   return btoa(String.fromCharCode(...bytes))
@@ -71,10 +85,10 @@ function TermsScreen({ onAccept }: { onAccept: () => void }) {
   return (
     <main className="access-screen" dir="rtl">
       <section className="access-card terms-card">
-        <div className="access-brand"><span className="brand-mark"><AudioLines size={22} /></span><strong>A3&amp;E1</strong><small>اتفاقية الاستخدام</small></div>
+        <div className="access-brand"><span className="brand-mark"><AudioLines size={22} /></span><strong>E&amp;A</strong><small>اتفاقية الاستخدام</small></div>
         <div className="terms-heading"><span className="section-kicker">اقرأ قبل إنشاء الحساب</span><h1>الشروط والأحكام والخصوصية</h1><p>آخر تحديث: أكتوبر 2026 · الإصدار {TERMS_VERSION}</p></div>
         <div className="terms-scroll" tabIndex={0} role="region" aria-label="نص الشروط والأحكام" onScroll={trackReading}>
-          <section><h2>1. طبيعة الخدمة</h2><p>A3&amp;E1 نموذج تعليمي لممارسة الإنجليزية من خلال موضوعات نظم المعلومات الإدارية. المحتوى والتقييم الآلي في هذه النسخة تجريبيان ولا يغنيان عن المحاضرات أو التقييم الأكاديمي الرسمي.</p></section>
+          <section><h2>1. طبيعة الخدمة</h2><p>E&amp;A نموذج تعليمي لممارسة الإنجليزية من خلال موضوعات نظم المعلومات الإدارية. المحتوى والتقييم الآلي في هذه النسخة تجريبيان ولا يغنيان عن المحاضرات أو التقييم الأكاديمي الرسمي.</p></section>
           <section><h2>2. الحساب والبيانات</h2><p>هذه النسخة تحفظ اسم المتدرّب وبريده ومواعيده وتقدّمه على هذا الجهاز فقط. لا يوجد خادم حسابات أو مزامنة سحابية حالياً. كلمة المرور لا تُحفظ كنص؛ يحفظ المتصفح مشتقاً تشفيرياً محلياً، لكن هذا لا يجعل الحساب بديلاً عن خدمة مصادقة خادمية.</p></section>
           <section><h2>3. التسجيل الصوتي</h2><p>لا يبدأ التسجيل إلا بعد ضغطك على زر الميكروفون ومنح الإذن. يسجل المتصفح الصوت محلياً لمعاينته أو تنزيله، ولا يرفعه التطبيق إلى خادم في هذه النسخة. لا يتضمن النموذج تحليلاً دقيقاً لمخارج الحروف أو النبر. إذا استخدمت خاصية من المتصفح لمعالجة الصوت، فقد تنطبق سياسة ذلك المتصفح.</p></section>
           <section><h2>4. المواعيد والتنبيهات</h2><p>يمكنك إضافة مواعيد أسبوعية ومدة لكل درس. نسخة Android ترسل إشعاراً محلياً عند منح الإذن، وقد يتأخر حسب إعدادات البطارية والمنبهات الدقيقة. نسخة الويب تذكّر أثناء فتح الصفحة فقط. لا يفتح التطبيق نفسه بالقوة ولا يمنع إغلاقه أو استخدام تطبيق آخر.</p></section>
@@ -127,7 +141,7 @@ function TraineeAccess({
   return (
     <main className="access-screen" dir="rtl">
       <section className="access-card login-card">
-        <div className="access-brand"><span className="brand-mark"><AudioLines size={22} /></span><strong>A3&amp;E1</strong><small>بوابة المتدرّب</small></div>
+        <div className="access-brand"><span className="brand-mark"><AudioLines size={22} /></span><strong>E&amp;A</strong><small>بوابة المتدرّب</small></div>
         <div className="login-heading"><span className="section-kicker">مساحة تعلّمك تبدأ من هنا</span><h1>{mode === 'register' ? 'إنشاء حساب متدرّب' : 'تسجيل دخول المتدرّب'}</h1><p>بيانات هذا الحساب تحفظ على هذا الجهاز في النسخة الحالية.</p></div>
         <div className="login-tabs"><button className={mode === 'register' ? 'tab-active' : ''} onClick={() => { setMode('register'); setError('') }}>حساب جديد</button><button className={mode === 'login' ? 'tab-active' : ''} onClick={() => { setMode('login'); setError('') }}>تسجيل الدخول</button></div>
         <form className="access-form" onSubmit={submit}>
@@ -145,7 +159,7 @@ function TraineeAccess({
 }
 const lessons = [
   {
-    id: 'database', title: 'Database Management', unit: 'الوحدة 03 · المفاتيح الأساسية', progress: 68,
+    id: 'database', title: 'Database Management', unit: 'الوحدة 03 · المفاتيح الأساسية',
     icon: Database, color: 'mint', duration: '12 دقيقة', category: 'database', categoryLabel: 'قواعد البيانات', level: 'B1',
     task: 'Explain why a relational database needs primary keys.',
     translation: 'اشرح لماذا تحتاج قاعدة البيانات العلائقية إلى مفاتيح أساسية.',
@@ -154,7 +168,7 @@ const lessons = [
     words: ['primary key', 'record', 'table', 'unique'],
   },
   {
-    id: 'systems', title: 'Systems Analysis', unit: 'الوحدة 03 · كتابة متطلب قابل للقياس', progress: 42,
+    id: 'systems', title: 'Systems Analysis', unit: 'الوحدة 03 · كتابة متطلب قابل للقياس',
     icon: Target, color: 'peach', duration: '15 دقيقة', category: 'systems', categoryLabel: 'تحليل النظم', level: 'B1',
     task: 'Turn a user complaint into a measurable system requirement.',
     translation: 'حوّل شكوى المستخدم إلى متطلب نظام قابل للقياس.',
@@ -163,7 +177,7 @@ const lessons = [
     words: ['system', 'display', 'results', 'seconds', 'requirement'], intensive: false,
   },
   {
-    id: 'projects', title: 'IT Project Management', unit: 'الوحدة 03 · تحديث حالة المشروع', progress: 25,
+    id: 'projects', title: 'IT Project Management', unit: 'الوحدة 03 · تحديث حالة المشروع',
     icon: BarChart3, color: 'lavender', duration: '10 دقائق', category: 'projects', categoryLabel: 'إدارة المشاريع', level: 'B1',
     task: 'Give a concise status update about a delayed software project.',
     translation: 'قدّم تحديثاً مختصراً عن مشروع برمجي متأخر.',
@@ -172,7 +186,7 @@ const lessons = [
     words: ['delayed', 'because', 'impact', 'next step', 'testing'],
   },
   {
-    id: 'commerce', title: 'E-Commerce', unit: 'الوحدة 03 · تحسين الدفع', progress: 16,
+    id: 'commerce', title: 'E-Commerce', unit: 'الوحدة 03 · تحسين الدفع',
     icon: Sparkles, color: 'yellow', duration: '14 دقيقة', category: 'commerce', categoryLabel: 'التجارة الإلكترونية', level: 'B1',
     task: 'Describe how a checkout flow reduces abandoned carts.',
     translation: 'اشرح كيف تقلل خطوات الدفع من السلات المتروكة.',
@@ -181,7 +195,7 @@ const lessons = [
     words: ['checkout', 'process', 'customer', 'reduce', 'cart'],
   },
   {
-    id: 'database-intro', title: 'Database Management', unit: 'الوحدة 01 · الجداول والحقول', progress: 100,
+    id: 'database-intro', title: 'Database Management', unit: 'الوحدة 01 · الجداول والحقول',
     icon: Database, color: 'mint', duration: '8 دقائق', category: 'database', categoryLabel: 'قواعد البيانات', level: 'A1',
     task: 'Describe what a table stores in a student database.',
     translation: 'صف ما الذي يخزّنه الجدول في قاعدة بيانات الطلاب.',
@@ -190,7 +204,7 @@ const lessons = [
     words: ['table', 'row', 'field', 'student'],
   },
   {
-    id: 'database-relations', title: 'Database Management', unit: 'الوحدة 02 · ربط البيانات', progress: 82,
+    id: 'database-relations', title: 'Database Management', unit: 'الوحدة 02 · ربط البيانات',
     icon: Database, color: 'mint', duration: '10 دقائق', category: 'database', categoryLabel: 'قواعد البيانات', level: 'A2',
     task: 'Explain how students and courses can be connected.',
     translation: 'اشرح كيف يمكن ربط الطلاب بالمقررات.',
@@ -199,7 +213,7 @@ const lessons = [
     words: ['connect', 'enrollment', 'student', 'course'],
   },
   {
-    id: 'database-indexing', title: 'Database Management', unit: 'الوحدة 04 · الفهارس والأداء', progress: 0,
+    id: 'database-indexing', title: 'Database Management', unit: 'الوحدة 04 · الفهارس والأداء',
     icon: Database, color: 'mint', duration: '18 دقيقة', category: 'database', categoryLabel: 'قواعد البيانات', level: 'B2',
     task: 'Compare an indexed query with a full table scan.',
     translation: 'قارن بين استعلام يستخدم فهرساً وآخر يفحص الجدول كاملاً.',
@@ -208,7 +222,7 @@ const lessons = [
     words: ['index', 'query', 'storage', 'read', 'write'],
   },
   {
-    id: 'database-capstone', title: 'Database Management', unit: 'مشروع مكثّف · تصميم قاعدة بيانات', progress: 0,
+    id: 'database-capstone', title: 'Database Management', unit: 'مشروع مكثّف · تصميم قاعدة بيانات',
     icon: Database, color: 'mint', duration: '25 دقيقة', category: 'database', categoryLabel: 'قواعد البيانات', level: 'C1', intensive: true,
     task: 'Present a secure database design for a university registration system.',
     translation: 'اعرض تصميماً آمناً لقاعدة بيانات نظام تسجيل جامعي.',
@@ -217,7 +231,7 @@ const lessons = [
     words: ['schema', 'normalize', 'relationship', 'privacy', 'constraint'],
   },
   {
-    id: 'systems-workflows', title: 'Systems Analysis', unit: 'الوحدة 01 · المستخدم وسير العمل', progress: 100,
+    id: 'systems-workflows', title: 'Systems Analysis', unit: 'الوحدة 01 · المستخدم وسير العمل',
     icon: Target, color: 'peach', duration: '8 دقائق', category: 'systems', categoryLabel: 'تحليل النظم', level: 'A1',
     task: 'Identify the user and one action in an inventory system.',
     translation: 'حدّد مستخدماً وإجراءً واحداً في نظام مخزون.',
@@ -226,7 +240,7 @@ const lessons = [
     words: ['user', 'item', 'quantity', 'update'],
   },
   {
-    id: 'systems-requirements', title: 'Systems Analysis', unit: 'الوحدة 02 · المتطلبات الوظيفية', progress: 74,
+    id: 'systems-requirements', title: 'Systems Analysis', unit: 'الوحدة 02 · المتطلبات الوظيفية',
     icon: Target, color: 'peach', duration: '12 دقيقة', category: 'systems', categoryLabel: 'تحليل النظم', level: 'A2',
     task: 'Write one functional requirement for an inventory search.',
     translation: 'اكتب متطلباً وظيفياً للبحث في المخزون.',
@@ -235,7 +249,7 @@ const lessons = [
     words: ['user', 'search', 'item', 'product'],
   },
   {
-    id: 'systems-usecases', title: 'Systems Analysis', unit: 'الوحدة 04 · حالات الاستخدام والقبول', progress: 0,
+    id: 'systems-usecases', title: 'Systems Analysis', unit: 'الوحدة 04 · حالات الاستخدام والقبول',
     icon: Target, color: 'peach', duration: '18 دقيقة', category: 'systems', categoryLabel: 'تحليل النظم', level: 'B2',
     task: 'Turn a return request into acceptance criteria.',
     translation: 'حوّل طلب إرجاع منتج إلى معايير قبول.',
@@ -244,7 +258,7 @@ const lessons = [
     words: ['actor', 'acceptance', 'criteria', 'request', 'condition'],
   },
   {
-    id: 'systems-capstone', title: 'Systems Analysis', unit: 'مشروع مكثّف · تحليل نظام مخزون', progress: 0,
+    id: 'systems-capstone', title: 'Systems Analysis', unit: 'مشروع مكثّف · تحليل نظام مخزون',
     icon: Target, color: 'peach', duration: '25 دقيقة', category: 'systems', categoryLabel: 'تحليل النظم', level: 'C1', intensive: true,
     task: 'Present a complete requirements brief for a multi-branch inventory system.',
     translation: 'اعرض موجز متطلبات متكاملاً لنظام مخزون متعدد الفروع.',
@@ -253,7 +267,7 @@ const lessons = [
     words: ['stakeholder', 'scope', 'reconcile', 'constraint', 'acceptance'],
   },
   {
-    id: 'projects-foundations', title: 'IT Project Management', unit: 'الوحدة 01 · الأدوار والمهام', progress: 100,
+    id: 'projects-foundations', title: 'IT Project Management', unit: 'الوحدة 01 · الأدوار والمهام',
     icon: BarChart3, color: 'lavender', duration: '8 دقائق', category: 'projects', categoryLabel: 'إدارة المشاريع', level: 'A1',
     task: 'Name two roles on a small software project.',
     translation: 'اذكر دورين في مشروع برمجي صغير.',
@@ -262,7 +276,7 @@ const lessons = [
     words: ['analyst', 'developer', 'team', 'task'],
   },
   {
-    id: 'projects-timeline', title: 'IT Project Management', unit: 'الوحدة 02 · الجدول والمعالم', progress: 70,
+    id: 'projects-timeline', title: 'IT Project Management', unit: 'الوحدة 02 · الجدول والمعالم',
     icon: BarChart3, color: 'lavender', duration: '12 دقيقة', category: 'projects', categoryLabel: 'إدارة المشاريع', level: 'A2',
     task: 'Explain the difference between a task and a milestone.',
     translation: 'اشرح الفرق بين المهمة والمعلم الرئيسي.',
@@ -271,7 +285,7 @@ const lessons = [
     words: ['task', 'milestone', 'schedule', 'complete'],
   },
   {
-    id: 'projects-risk', title: 'IT Project Management', unit: 'الوحدة 04 · المخاطر وأصحاب المصلحة', progress: 0,
+    id: 'projects-risk', title: 'IT Project Management', unit: 'الوحدة 04 · المخاطر وأصحاب المصلحة',
     icon: BarChart3, color: 'lavender', duration: '18 دقيقة', category: 'projects', categoryLabel: 'إدارة المشاريع', level: 'B2',
     task: 'Explain a delivery risk and propose a mitigation plan.',
     translation: 'اشرح خطراً يهدد التسليم واقترح خطة لتخفيفه.',
@@ -280,7 +294,7 @@ const lessons = [
     words: ['risk', 'impact', 'mitigate', 'integration', 'owner'],
   },
   {
-    id: 'projects-capstone', title: 'IT Project Management', unit: 'مشروع مكثّف · خطة إطلاق منتج', progress: 0,
+    id: 'projects-capstone', title: 'IT Project Management', unit: 'مشروع مكثّف · خطة إطلاق منتج',
     icon: BarChart3, color: 'lavender', duration: '25 دقيقة', category: 'projects', categoryLabel: 'إدارة المشاريع', level: 'C1', intensive: true,
     task: 'Lead a project review for a delayed product launch.',
     translation: 'أدر مراجعة مشروع لإطلاق منتج متأخر.',
@@ -289,7 +303,7 @@ const lessons = [
     words: ['variance', 'scope', 'stakeholder', 'trade-off', 'release'],
   },
   {
-    id: 'commerce-catalog', title: 'E-Commerce', unit: 'الوحدة 01 · المنتجات والأسعار', progress: 100,
+    id: 'commerce-catalog', title: 'E-Commerce', unit: 'الوحدة 01 · المنتجات والأسعار',
     icon: Sparkles, color: 'yellow', duration: '8 دقائق', category: 'commerce', categoryLabel: 'التجارة الإلكترونية', level: 'A1',
     task: 'Describe a product listing in an online store.',
     translation: 'صف بطاقة منتج في متجر إلكتروني.',
@@ -298,7 +312,7 @@ const lessons = [
     words: ['product', 'price', 'stock', 'customer'],
   },
   {
-    id: 'commerce-cart', title: 'E-Commerce', unit: 'الوحدة 02 · السلة وخطوات الدفع', progress: 65,
+    id: 'commerce-cart', title: 'E-Commerce', unit: 'الوحدة 02 · السلة وخطوات الدفع',
     icon: Sparkles, color: 'yellow', duration: '12 دقيقة', category: 'commerce', categoryLabel: 'التجارة الإلكترونية', level: 'A2',
     task: 'Explain the steps a customer follows to place an order.',
     translation: 'اشرح الخطوات التي يتبعها العميل لإتمام الطلب.',
@@ -307,7 +321,7 @@ const lessons = [
     words: ['cart', 'review', 'payment', 'confirm'],
   },
   {
-    id: 'commerce-funnel', title: 'E-Commerce', unit: 'الوحدة 04 · التحويل ومؤشرات الأداء', progress: 0,
+    id: 'commerce-funnel', title: 'E-Commerce', unit: 'الوحدة 04 · التحويل ومؤشرات الأداء',
     icon: Sparkles, color: 'yellow', duration: '18 دقيقة', category: 'commerce', categoryLabel: 'التجارة الإلكترونية', level: 'B2',
     task: 'Interpret a drop in conversion between product views and checkout.',
     translation: 'فسّر انخفاض التحويل بين مشاهدة المنتج وبدء الدفع.',
@@ -316,7 +330,7 @@ const lessons = [
     words: ['conversion', 'drop-off', 'checkout', 'metric', 'experiment'],
   },
   {
-    id: 'commerce-capstone', title: 'E-Commerce', unit: 'مشروع مكثّف · تحليل متجر رقمي', progress: 0,
+    id: 'commerce-capstone', title: 'E-Commerce', unit: 'مشروع مكثّف · تحليل متجر رقمي',
     icon: Sparkles, color: 'yellow', duration: '25 دقيقة', category: 'commerce', categoryLabel: 'التجارة الإلكترونية', level: 'C1', intensive: true,
     task: 'Present an evidence-based plan to improve an online store funnel.',
     translation: 'اعرض خطة مبنية على البيانات لتحسين مسار متجر إلكتروني.',
@@ -376,22 +390,27 @@ function App() {
   const [isRecording, setIsRecording] = useState(false)
   const [recordingSeconds, setRecordingSeconds] = useState(0)
   const [audioUrl, setAudioUrl] = useState('')
-  const [audioFileName, setAudioFileName] = useState('A3E1-MIS-response.webm')
+  const [audioFileName, setAudioFileName] = useState('EA-MIS-response.webm')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedLevel, setSelectedLevel] = useState('all')
   const [selectedFormat, setSelectedFormat] = useState<'all' | 'intensive'>('all')
   const [focusSession, setFocusSession] = useState(false)
   const [secondsLeft, setSecondsLeft] = useState(12 * 60)
   const [sessionDurationMinutes, setSessionDurationMinutes] = useState(12)
-  const [completed, setCompleted] = useState(() => localStorage.getItem('a3e1-completed') === 'true')
-  const [xp, setXp] = useState(() => Number(localStorage.getItem('a3e1-xp') ?? 420))
+  const [learningSessions, setLearningSessions] = useState<LearningSession[]>(() => storedValue<LearningSession[]>('a3e1-learning-sessions', []))
   const [showTip, setShowTip] = useState(false)
+  const sessionStartedAtRef = useRef<number | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const triggeredSchedulesRef = useRef(new Set<string>())
   const schedulesRef = useRef(schedules)
   const notificationListenerRef = useRef<PluginListenerHandle | null>(null)
+
+  useEffect(() => {
+    localStorage.removeItem('a3e1-xp')
+    localStorage.removeItem('a3e1-completed')
+  }, [])
 
   useEffect(() => {
     if (!focusSession || secondsLeft <= 0) return
@@ -422,7 +441,7 @@ function App() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return
     let disposed = false
-    void LocalNotifications.createChannel({ id: 'lesson-reminders', name: 'مواعيد الدروس', description: 'تذكيرات مواعيد دروس A3&E1', importance: 4, vibration: true }).catch(() => undefined)
+    void LocalNotifications.createChannel({ id: 'lesson-reminders', name: 'مواعيد الدروس', description: 'تذكيرات مواعيد دروس E&A', importance: 4, vibration: true }).catch(() => undefined)
     void LocalNotifications.checkPermissions().then((permission) => setNotificationPermission(permission.display)).catch(() => setNotificationPermission('unsupported'))
     void LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
       const scheduleId = action.notification.extra?.scheduleId
@@ -457,7 +476,7 @@ function App() {
       if ('Notification' in window && Notification.permission === 'granted') {
         const lesson = lessons.find((item) => item.id === schedule.lessonId)
         try {
-          new Notification('موعد درس A3&E1', { body: `حان موعد ${lesson?.title ?? 'درسك'}. افتح التطبيق لبدء الجلسة.` })
+          new Notification('موعد درس E&A', { body: `حان موعد ${lesson?.title ?? 'درسك'}. افتح التطبيق لبدء الجلسة.` })
         } catch {
           setNotificationPermission('unsupported')
         }
@@ -572,7 +591,7 @@ function App() {
       await LocalNotifications.schedule({
         notifications: [{
           id: schedule.notificationId ?? Math.floor(Math.random() * 2_000_000_000),
-          title: `A3&E1 · ${lesson?.title ?? 'درس MIS'}`,
+          title: `E&A · ${lesson?.title ?? 'درس MIS'}`,
           body: `${lesson?.unit ?? 'موعد درسك'} · مدّة ${schedule.duration} دقيقة`,
           schedule: { on: { weekday: schedule.weekday + 1, hour, minute, second: 0 }, allowWhileIdle: true },
           channelId: 'lesson-reminders',
@@ -593,6 +612,7 @@ function App() {
 
   function startFocusSession(lesson = selectedLesson, durationMinutes?: number) {
     setSessionLesson(lesson)
+    sessionStartedAtRef.current = Date.now()
     const sessionMinutes = durationMinutes ?? (Number.parseInt(lesson.duration, 10) || 12)
     setSessionDurationMinutes(sessionMinutes)
     setSecondsLeft(sessionMinutes * 60)
@@ -602,7 +622,7 @@ function App() {
     setAnswer('')
     setRecordingSeconds(0)
     setAudioUrl('')
-    setAudioFileName('A3E1-MIS-response.webm')
+    setAudioFileName('EA-MIS-response.webm')
   }
 
   function stopFocusSession() {
@@ -612,16 +632,17 @@ function App() {
   }
 
   function finishLesson() {
-    if (completed) return
+    if (sessionStartedAtRef.current === null) return
     if (mediaRecorderRef.current?.state === 'recording') mediaRecorderRef.current.stop()
-    setCompleted(true)
-    setXp((currentXp) => {
-      const nextXp = currentXp + 40
-      localStorage.setItem('a3e1-xp', String(nextXp))
-      return nextXp
-    })
-    localStorage.setItem('a3e1-completed', 'true')
-    setFeedback('أحسنت. أُضيفت 40 نقطة خبرة، وحُفظ إنجازك على هذا الجهاز.')
+    const firstCompletion = !learningSessions.some((session) => session.lessonId === sessionLesson.id)
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - (sessionStartedAtRef.current ?? Date.now())) / 1000))
+    const updatedSessions = [...learningSessions, { lessonId: sessionLesson.id, completedAt: new Date().toISOString(), elapsedSeconds }]
+    setLearningSessions(updatedSessions)
+    localStorage.setItem('a3e1-learning-sessions', JSON.stringify(updatedSessions))
+    sessionStartedAtRef.current = null
+    setFeedback(firstCompletion
+      ? 'أحسنت. أُضيفت 40 نقطة خبرة، وحُفظ إنجازك على هذا الجهاز.'
+      : 'أحسنت. حُفظت جلسة التدريب؛ نقاط الخبرة تُمنح عند إكمال الدرس لأول مرة فقط.')
   }
 
   function reviewAnswer() {
@@ -671,7 +692,7 @@ function App() {
           setFeedback('لم يلتقط التسجيل صوتاً. تحقق من الميكروفون وأعد المحاولة.')
           return
         }
-        setAudioFileName(`A3E1-MIS-response.${recorder.mimeType.includes('mp4') ? 'm4a' : 'webm'}`)
+        setAudioFileName(`EA-MIS-response.${recorder.mimeType.includes('mp4') ? 'm4a' : 'webm'}`)
         setAudioUrl(URL.createObjectURL(audioBlob))
         setFeedback('تم تسجيل إجابتك. شغّل المقطع لمراجعته قبل الإرسال.')
       }
@@ -741,6 +762,29 @@ function App() {
     && (selectedFormat === 'all' || lesson.intensive === true)
   ))
 
+  const completedLessonIds = new Set(learningSessions.map((session) => session.lessonId))
+  const xp = completedLessonIds.size * 40
+  const lessonProgress = (lessonId: string) => completedLessonIds.has(lessonId) ? 100 : 0
+  const today = new Date()
+  const weeklyActivity = Array.from({ length: 7 }, (_, index) => {
+    const date = localDayOffset(today, index - 6)
+    const dateKey = localDateKey(date)
+    const sessionsForDay = learningSessions.filter((session) => localDateKey(new Date(session.completedAt)) === dateKey)
+    return {
+      date,
+      sessions: sessionsForDay.length,
+      minutes: sessionsForDay.reduce((total, session) => total + session.elapsedSeconds, 0) / 60,
+      isToday: index === 6,
+    }
+  })
+  const weeklySessionCount = weeklyActivity.reduce((total, day) => total + day.sessions, 0)
+  const maxWeeklyMinutes = Math.max(60, Math.ceil(Math.max(...weeklyActivity.map((day) => day.minutes)) / 20) * 20)
+  const activeDates = new Set(learningSessions.map((session) => localDateKey(new Date(session.completedAt))))
+  const streakStart = activeDates.has(localDateKey(today)) ? 0 : -1
+  let currentStreak = 0
+  for (let offset = streakStart; activeDates.has(localDateKey(localDayOffset(today, offset))); offset -= 1) currentStreak += 1
+  const recentSessions = [...learningSessions].reverse().slice(0, 5)
+
   function changeSection(nextSection: Section) {
     setSection(nextSection)
     stopFocusSession()
@@ -756,9 +800,9 @@ function App() {
   return (
     <div className="app-shell" dir="rtl">
       <aside className="sidebar">
-        <a className="brand" href="#home" onClick={() => changeSection('today')} aria-label="A3&E1، الرئيسية">
+        <a className="brand" href="#home" onClick={() => changeSection('today')} aria-label="E&A، الرئيسية">
           <span className="brand-mark"><AudioLines size={21} strokeWidth={2.4} /></span>
-          <span className="brand-copy"><strong>A3&amp;E1</strong><small>ENGLISH × MIS</small></span>
+          <span className="brand-copy"><strong>E&amp;A</strong><small>ENGLISH × MIS</small></span>
         </a>
         <div className="sidebar-caption">مساحة الدراسة</div>
         <nav className="side-nav" aria-label="التنقل الرئيسي">
@@ -771,12 +815,12 @@ function App() {
         <div className="sidebar-caption track-caption">تخصصي</div>
         <div className="mini-course"><span className="mini-course-icon"><Database size={16} /></span><span><strong>نظم المعلومات</strong><small>المستوى الجامعي</small></span><ChevronLeft size={15} className="mini-arrow" /></div>
         <div className="sidebar-spacer" />
-        <div className="sidebar-streak"><div className="streak-top"><span className="streak-flame"><Flame size={16} fill="currentColor" /></span><strong>6 أيام</strong><span className="streak-label">سلسلة التعلّم</span></div><div className="streak-days" aria-label="ستة أيام متتالية"><span className="done">س</span><span className="done">ح</span><span className="done">ن</span><span className="done">ث</span><span className="done">ر</span><span className="today-dot">خ</span><span>ج</span></div></div>
+        <div className="sidebar-streak"><div className="streak-top"><span className="streak-flame"><Flame size={16} fill="currentColor" /></span><strong>{currentStreak} أيام</strong><span className="streak-label">سلسلة التعلّم</span></div><div className="streak-days" aria-label="نشاط آخر سبعة أيام">{weeklyActivity.map((day) => <span className={`${day.isToday ? 'today-dot' : day.sessions ? 'done' : ''}`} key={localDateKey(day.date)} title={`${weekdayNames[day.date.getDay()]}: ${day.sessions} جلسة`}>{weekdayInitials[day.date.getDay()]}</span>)}</div></div>
         <button className="profile-row" onClick={logout}><span className="avatar">{profile.name.slice(0, 1)}</span><span className="profile-copy"><strong>{profile.name}</strong><small>تسجيل الخروج</small></span><LogOut size={17} /></button>
       </aside>
 
       <main className="main-area">
-        <header className="topbar"><div className="mobile-brand"><span className="brand-mark"><AudioLines size={19} /></span><strong>A3&amp;E1</strong></div><div className="breadcrumb"><span>مساحة الدراسة</span><ChevronLeft size={14} /><strong>{pageTitle}</strong></div><div className="topbar-actions"><button className="icon-button help-button" aria-label="مساعدة" onClick={() => setShowTip((visible) => !visible)}><CircleHelp size={18} /></button><div className="xp-pill"><span className="xp-spark"><Sparkles size={15} /></span><strong>{xp.toLocaleString('en-US')}</strong><span>XP</span></div><button className="top-avatar" onClick={logout} aria-label="تسجيل الخروج" title="تسجيل الخروج">{profile.name.slice(0, 1)}</button></div></header>
+        <header className="topbar"><div className="mobile-brand"><span className="brand-mark"><AudioLines size={19} /></span><strong>E&amp;A</strong></div><div className="breadcrumb"><span>مساحة الدراسة</span><ChevronLeft size={14} /><strong>{pageTitle}</strong></div><div className="topbar-actions"><button className="icon-button help-button" aria-label="مساعدة" onClick={() => setShowTip((visible) => !visible)}><CircleHelp size={18} /></button><div className="xp-pill"><span className="xp-spark"><Sparkles size={15} /></span><strong>{xp.toLocaleString('en-US')}</strong><span>XP</span></div><button className="top-avatar" onClick={logout} aria-label="تسجيل الخروج" title="تسجيل الخروج">{profile.name.slice(0, 1)}</button></div></header>
         {showTip && <div className="tip-banner"><ShieldCheck size={18} /><span>جلسات التركيز اختيارية وقابلة للإيقاف. لا يقفل هذا النموذج تطبيقات الهاتف الأخرى.</span><button onClick={() => setShowTip(false)} aria-label="إغلاق"><X size={16} /></button></div>}
         {dueSchedule && <div className="schedule-alert" role="alertdialog" aria-modal="true" aria-labelledby="schedule-alert-title"><div className="schedule-alert-card"><span className="due-icon"><Bell size={21} /></span><span className="section-kicker">موعدك الآن · {dueSchedule.time}</span><h2 id="schedule-alert-title">حان وقت {lessons.find((item) => item.id === dueSchedule.lessonId)?.unit ?? 'درس MIS'}.</h2><p>مدّة الجلسة {dueSchedule.duration} دقيقة. ابدأ عندما تكون مستعداً؛ يمكنك تأجيل التذكير أو إغلاقه.</p><div className="schedule-alert-actions"><button className="primary-button" onClick={() => startScheduledLesson(dueSchedule)}>ابدأ الدرس <ArrowUpRight size={16} /></button><button className="secondary-button" onClick={() => snoozeSchedule(dueSchedule)}>ذكّرني بعد 10 دقائق</button><button className="dismiss-button" onClick={() => setDueSchedule(null)}>إغلاق التذكير</button></div></div></div>}
 
@@ -801,11 +845,11 @@ function App() {
                 {audioUrl && <div className="audio-preview"><div className="audio-preview-title"><span><AudioLines size={16} /><strong>معاينة التسجيل</strong></span><button onClick={deleteRecording} aria-label="حذف التسجيل"><X size={16} /></button></div><audio controls preload="metadata" src={audioUrl} onLoadedMetadata={(event) => { if (Number.isFinite(event.currentTarget.duration)) setRecordingSeconds(Math.floor(event.currentTarget.duration)) }}>المتصفح لا يدعم تشغيل الصوت.</audio><div className="audio-preview-actions"><button className="review-button" onClick={deleteRecording}><RotateCcw size={14} /> تسجيل مرة أخرى</button><a className="download-audio" href={audioUrl} download={audioFileName} aria-label="تنزيل التسجيل"><Download size={15} /> تنزيل</a></div></div>}
                 {feedback && <div className="feedback-box"><Sparkles size={16} /><span>{feedback}</span></div>}
               </div></div>
-            <div className="focus-footer"><div className="privacy-note"><ShieldCheck size={16} /><span>لا يحفظ التطبيق الصوت؛ قد يعالجه المتصفح.</span></div><button className="complete-button" onClick={finishLesson}>{completed ? 'تم إنجاز المهمة' : 'أنهيت المهمة'} <Check size={16} /></button></div>
+            <div className="focus-footer"><div className="privacy-note"><ShieldCheck size={16} /><span>لا يحفظ التطبيق الصوت؛ قد يعالجه المتصفح.</span></div><button className="complete-button" onClick={finishLesson} disabled={sessionStartedAtRef.current === null}>{sessionStartedAtRef.current === null ? 'تم تسجيل الجلسة' : completedLessonIds.has(sessionLesson.id) ? 'أكمل التدريب مرة أخرى' : 'أنهيت المهمة'} <Check size={16} /></button></div>
           </section>
         ) : section === 'today' ? (
-          <div className="page-content"><section className="welcome-row"><div><div className="date-kicker">{new Intl.DateTimeFormat('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())} <span className="date-line" /></div><h1>صباح التقدّم، {profile.name}<span className="heading-period">.</span></h1><p>كل جلسة تقرّبك من التحدث بثقة في تخصصك.</p></div><div className="week-progress"><div className="week-progress-copy"><span>هدفك الأسبوعي</span><strong>3 <small>/ 5 جلسات</small></strong></div><div className="week-track"><span /></div></div></section>
-            <section className="challenge-banner"><div className="challenge-copy"><div className="challenge-kicker"><span className="challenge-icon"><Target size={15} /></span> تحدّي اليوم <span className="challenge-time"><Clock3 size={13} /> 1 دقيقة</span></div><h2>اشرح مفهوم <b>SQL</b> بصوت واضح.</h2><p>تحدّث كأنك تشرح لزميلك كيف تسترجع بيانات من قاعدة بيانات.</p><button className="challenge-cta" onClick={() => startFocusSession(dailyChallenge)}>ابدأ التحدّي <ArrowUpRight size={16} /></button></div><div className="challenge-visual" aria-hidden="true"><div className="orbit orbit-one" /><div className="orbit orbit-two" /><div className="orbit-core"><Database size={29} /></div><span className="float-chip chip-sql">SELECT *</span><span className="float-chip chip-db">FROM database</span><span className="visual-dot dot-one" /><span className="visual-dot dot-two" /></div><span className="challenge-index">01 <span>/ 03</span></span></section>
+          <div className="page-content"><section className="welcome-row"><div><div className="date-kicker">{new Intl.DateTimeFormat('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())} <span className="date-line" /></div><h1>صباح التقدّم، {profile.name}<span className="heading-period">.</span></h1><p>كل جلسة تقرّبك من التحدث بثقة في تخصصك.</p></div><div className="week-progress"><div className="week-progress-copy"><span>هدفك الأسبوعي</span><strong>{Math.min(weeklySessionCount, 5)} <small>/ 5 جلسات</small></strong></div><div className="week-track"><span style={{ width: `${Math.min(weeklySessionCount / 5 * 100, 100)}%` }} /></div></div></section>
+            <section className="challenge-banner"><div className="challenge-copy"><div className="challenge-kicker"><span className="challenge-icon"><Target size={15} /></span> تحدّي اليوم <span className="challenge-time"><Clock3 size={13} /> 1 دقيقة</span></div><h2>اشرح مفهوم <b>SQL</b> بصوت واضح.</h2><p>تحدّث كأنك تشرح لزميلك كيف تسترجع بيانات من قاعدة بيانات.</p><button className="challenge-cta" onClick={() => startFocusSession(dailyChallenge)}>ابدأ التحدّي <ArrowUpRight size={16} /></button></div><div className="challenge-visual" aria-hidden="true"><div className="orbit orbit-one" /><div className="orbit orbit-two" /><div className="orbit-core"><Database size={29} /></div><span className="float-chip chip-sql">SELECT *</span><span className="float-chip chip-db">FROM database</span><span className="visual-dot dot-one" /><span className="visual-dot dot-two" /></div><span className="challenge-index">SQL</span></section>
             <section className="schedule-panel"><div className="schedule-panel-heading"><div><span className="section-kicker">خطّة أسبوعك</span><h2>مواعيد دروسي</h2></div><div className="schedule-actions"><button className="notification-button" onClick={enableNotifications} disabled={notificationPermission === 'granted' || notificationPermission === 'unsupported'}><Bell size={15} />{notificationPermission === 'granted' ? 'التنبيهات مفعّلة' : notificationPermission === 'denied' ? `فعّلها من إعدادات ${Capacitor.isNativePlatform() ? 'التطبيق' : 'المتصفح'}` : `تفعيل تنبيه ${Capacitor.isNativePlatform() ? 'الجهاز' : 'المتصفح'}`}</button><button className="add-schedule-button" onClick={() => setShowScheduleForm((visible) => !visible)}><CalendarPlus size={16} /> إضافة موعد</button></div></div>
               {showScheduleForm && <form className="schedule-form" onSubmit={saveSchedule}><label>الدرس<select value={scheduleLessonId} onChange={(event) => setScheduleLessonId(event.target.value)}>{lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.categoryLabel} · {lesson.unit} · {lesson.level}</option>)}</select></label><label>اليوم<select value={scheduleWeekday} onChange={(event) => setScheduleWeekday(Number(event.target.value))}>{weekdayNames.map((day, index) => <option key={day} value={index}>{day}</option>)}</select></label><label>الوقت<input type="time" required value={scheduleTime} onChange={(event) => setScheduleTime(event.target.value)} /></label><label>المدة بالدقائق<input type="number" min="5" max="180" step="5" required value={scheduleDuration} onChange={(event) => setScheduleDuration(Number(event.target.value))} /></label><button className="primary-button" type="submit">حفظ الموعد <Check size={15} /></button></form>}
               {schedules.length === 0 ? <p className="schedule-empty">لم تضف مواعيد بعد. اختر يوم الدرس ووقته ومدته.</p> : <div className="schedule-list">{schedules.map((schedule) => { const lesson = lessons.find((item) => item.id === schedule.lessonId); return <div className="schedule-row" key={schedule.id}><span className="schedule-day">{weekdayNames[schedule.weekday]}</span><strong dir="ltr">{schedule.time}</strong><span className="schedule-row-title">{lesson?.unit ?? 'درس MIS'}</span><span className="schedule-duration">{schedule.duration} دقيقة</span><button onClick={() => removeSchedule(schedule.id)} aria-label={`حذف موعد ${weekdayNames[schedule.weekday]}`}><X size={16} /></button></div> })}</div>}
@@ -813,9 +857,9 @@ function App() {
             </section>
             <button className="intensive-promo" onClick={() => { setSelectedCategory('all'); setSelectedLevel('all'); setSelectedFormat('intensive'); setSection('path') }}><span className="intensive-promo-icon"><Target size={20} /></span><span><strong>المسار المكثّف</strong><small>4 مشروعات تخصصية · مستوى C1 · 25 دقيقة لكل مشروع</small></span><ArrowLeft size={18} /></button>
             <div className="section-heading"><div><span className="section-kicker">رحلتك الدراسية</span><h2>كمّل من حيث توقّفت</h2></div><button className="text-link" onClick={() => changeSection('path')}>كل المسارات <ArrowLeft size={15} /></button></div>
-            <div className="dashboard-grid"><section className="continue-card"><div className="continue-top"><span className={`lesson-icon ${selectedLesson.color}`}><LessonIcon size={20} /></span><span className="continue-category">{selectedLesson.unit}</span><button className="more-button" aria-label="خيارات المسار"><Menu size={18} /></button></div><h3>{selectedLesson.title}</h3><p className="continue-description">تعلّم المصطلحات من خلال بناء حلّ حقيقي، خطوة بخطوة.</p><div className="lesson-progress-line"><div className="progress-track"><span style={{ width: `${selectedLesson.progress}%` }} /></div><span>{selectedLesson.progress}%</span></div><div className="continue-bottom"><div className="lesson-meta"><span><Clock3 size={14} /> {selectedLesson.duration}</span><span><Headphones size={14} /> استماع + تحدث</span></div><button className="round-arrow" onClick={() => startFocusSession()} aria-label="تابع الدرس"><ArrowLeft size={18} /></button></div></section>
-              <section className="weekly-card"><div className="card-heading"><div><span className="section-kicker">ثباتك يصنع الفرق</span><h3>نشاطك هذا الأسبوع</h3></div><button className="icon-button" aria-label="خيارات الرسم"><Menu size={17} /></button></div><div className="chart-area"><div className="chart-y-labels"><span>60</span><span>40</span><span>20</span><span>0</span></div><div className="chart-plot"><div className="chart-gridlines"><i /><i /><i /><i /></div><div className="bar-set">{[{ day: 'س', height: 35 }, { day: 'ح', height: 70 }, { day: 'ن', height: 52 }, { day: 'ث', height: 88 }, { day: 'ر', height: 62 }, { day: 'خ', height: 100 }, { day: 'ج', height: 24 }].map((item, index) => <div className="bar-column" key={item.day}><span className={`bar ${index === 5 ? 'bar-today' : ''}`} style={{ height: `${item.height}%` }} /><small>{item.day}</small></div>)}</div></div></div><div className="chart-foot"><span><i className="legend-dot" /> دقائق التعلّم</span><strong>+18% <ArrowUpRight size={14} /></strong></div></section></div>
-            <div className="section-heading module-heading"><div><span className="section-kicker">تعلّم عبر التخصص</span><h2>مساراتك في MIS</h2></div><span className="module-count">{lessons.length} درس</span></div><div className="path-grid">{featuredLessons.map((lesson) => { const Icon = lesson.icon; return <button className="path-card" key={lesson.id} onClick={() => selectLesson(lesson)}><span className={`lesson-icon ${lesson.color}`}><Icon size={19} /></span><span className="path-card-copy"><strong>{lesson.title}</strong><small>{lesson.categoryLabel} · {lesson.level} · {lesson.progress}%</small></span><ChevronLeft size={17} className="path-chevron" /></button> })}</div><footer className="page-note"><LockKeyhole size={14} /> تركيز اختياري داخل التطبيق <span /> بياناتك التعليمية محفوظة على جهازك</footer>
+            <div className="dashboard-grid"><section className="continue-card"><div className="continue-top"><span className={`lesson-icon ${selectedLesson.color}`}><LessonIcon size={20} /></span><span className="continue-category">{selectedLesson.unit}</span><button className="more-button" aria-label="خيارات المسار"><Menu size={18} /></button></div><h3>{selectedLesson.title}</h3><p className="continue-description">تعلّم المصطلحات من خلال بناء حلّ حقيقي، خطوة بخطوة.</p><div className="lesson-progress-line"><div className="progress-track"><span style={{ width: `${lessonProgress(selectedLesson.id)}%` }} /></div><span>{lessonProgress(selectedLesson.id)}%</span></div><div className="continue-bottom"><div className="lesson-meta"><span><Clock3 size={14} /> {selectedLesson.duration}</span><span><Headphones size={14} /> استماع + تحدث</span></div><button className="round-arrow" onClick={() => startFocusSession()} aria-label="تابع الدرس"><ArrowLeft size={18} /></button></div></section>
+              <section className="weekly-card"><div className="card-heading"><div><span className="section-kicker">ثباتك يصنع الفرق</span><h3>نشاطك هذا الأسبوع</h3></div></div><div className="chart-area"><div className="chart-y-labels"><span>{maxWeeklyMinutes}</span><span>{Math.round(maxWeeklyMinutes / 2)}</span><span>0</span></div><div className="chart-plot"><div className="chart-gridlines"><i /><i /><i /></div><div className="bar-set">{weeklyActivity.map((day) => <div className="bar-column" key={localDateKey(day.date)}><span className={`bar ${day.isToday ? 'bar-today' : ''}`} title={`${Math.round(day.minutes)} دقيقة · ${day.sessions} جلسة`} style={{ height: `${day.minutes ? Math.max(day.minutes / maxWeeklyMinutes * 100, 4) : 0}%` }} /><small>{weekdayInitials[day.date.getDay()]}</small></div>)}</div></div></div><div className="chart-foot"><span><i className="legend-dot" /> دقائق التعلّم</span><strong>{Math.round(weeklyActivity.reduce((total, day) => total + day.minutes, 0))} دقيقة · {weeklySessionCount} جلسة</strong></div></section></div>
+            <div className="section-heading module-heading"><div><span className="section-kicker">تعلّم عبر التخصص</span><h2>مساراتك في MIS</h2></div><span className="module-count">{lessons.length} درس</span></div><div className="path-grid">{featuredLessons.map((lesson) => { const Icon = lesson.icon; return <button className="path-card" key={lesson.id} onClick={() => selectLesson(lesson)}><span className={`lesson-icon ${lesson.color}`}><Icon size={19} /></span><span className="path-card-copy"><strong>{lesson.title}</strong><small>{lesson.categoryLabel} · {lesson.level} · {lessonProgress(lesson.id)}%</small></span><ChevronLeft size={17} className="path-chevron" /></button> })}</div><footer className="page-note"><LockKeyhole size={14} /> تركيز اختياري داخل التطبيق <span /> بياناتك التعليمية محفوظة على جهازك</footer>
           </div>
         ) : section === 'path' ? (
           <div className="page-content inner-page">
@@ -825,12 +869,33 @@ function App() {
             </div>
             <div className="lesson-filter-panel"><div className="level-filter-row"><span>مستوى الإنجليزية</span><div className="level-filter-options">{proficiencyLevels.map((level) => <button key={level} className={selectedLevel === level ? 'selected-filter' : ''} onClick={() => setSelectedLevel(level)}>{level === 'all' ? 'كل المستويات' : level}<span>{level === 'all' ? lessons.length : lessons.filter((lesson) => lesson.level === level).length}</span></button>)}</div></div><div className="format-filter-row"><span>نوع الوحدة</span><div className="format-toggle"><button className={selectedFormat === 'all' ? 'selected-filter' : ''} onClick={() => setSelectedFormat('all')}>كل الدروس</button><button className={selectedFormat === 'intensive' ? 'selected-filter' : ''} onClick={() => setSelectedFormat('intensive')}>دروس مكثفة <span>{lessons.filter((lesson) => lesson.intensive).length}</span></button></div></div></div>
             <p className="catalog-result-count">يعرض {filteredLessons.length} من {lessons.length} درس</p>
-            <div className="path-list">{filteredLessons.map((lesson, index) => { const Icon = lesson.icon; return <button className={`path-list-card ${selectedLesson.id === lesson.id ? 'selected' : ''}`} key={lesson.id} onClick={() => selectLesson(lesson)}><span className="path-order">{String(index + 1).padStart(2, '0')}</span><span className={`lesson-icon ${lesson.color}`}><Icon size={21} /></span><span className="path-list-copy"><strong>{lesson.unit}</strong><span className="path-classification"><small>{lesson.title}</small><small className="level-badge">{lesson.level}</small>{lesson.intensive && <small className="intensive-badge">مكثف · 25 د</small>}</span><span className="progress-track"><i style={{ width: `${lesson.progress}%` }} /></span></span><span className="path-list-progress">{lesson.progress}%</span><ChevronLeft size={18} /></button> })}</div>
+            <div className="path-list">{filteredLessons.map((lesson, index) => { const Icon = lesson.icon; const progress = lessonProgress(lesson.id); return <button className={`path-list-card ${selectedLesson.id === lesson.id ? 'selected' : ''}`} key={lesson.id} onClick={() => selectLesson(lesson)}><span className="path-order">{String(index + 1).padStart(2, '0')}</span><span className={`lesson-icon ${lesson.color}`}><Icon size={21} /></span><span className="path-list-copy"><strong>{lesson.unit}</strong><span className="path-classification"><small>{lesson.title}</small><small className="level-badge">{lesson.level}</small>{lesson.intensive && <small className="intensive-badge">مكثف · 25 د</small>}</span><span className="progress-track"><i style={{ width: `${progress}%` }} /></span></span><span className="path-list-progress">{progress}%</span><ChevronLeft size={18} /></button> })}</div>
             {filteredLessons.length === 0 && <p className="empty-category">لا توجد مسارات في هذا التصنيف بعد.</p>}
             <section className="selected-lesson-panel"><div><span className="section-kicker">{selectedLesson.categoryLabel} · المستوى {selectedLesson.level}{selectedLesson.intensive ? ' · درس مكثف' : ''}</span><h2>{selectedLesson.task}</h2><p>{selectedLesson.translation}</p><div className="skill-pills"><span>فهم السياق</span><span>كتابة أكاديمية</span><span>تحدث</span></div></div><button className="primary-button" onClick={() => startFocusSession()}>ابدأ الوحدة <ArrowUpRight size={16} /></button></section>
           </div>
         ) : (
-          <div className="page-content inner-page progress-page"><div className="inner-page-heading"><span className="section-kicker">أنت تتحسن، خطوة بعد خطوة</span><h1>تقدّمك يتكلم.</h1><p>التركيز على ما تستطيع فعله باللغة، لا على عدد الكلمات التي حفظتها.</p></div><div className="stats-grid"><div className="stat-card"><span className="stat-icon mint-icon"><Flame size={19} /></span><span>أيام متتالية</span><strong>6 <small>أيام</small></strong><small className="stat-foot">أفضل سلسلة: 9 أيام</small></div><div className="stat-card"><span className="stat-icon yellow-icon"><Trophy size={19} /></span><span>نقاط الخبرة</span><strong>{xp.toLocaleString('en-US')} <small>XP</small></strong><small className="stat-foot">المستوى 4 · محلل مبتدئ</small></div><div className="stat-card"><span className="stat-icon peach-icon"><Check size={19} /></span><span>وحدات مكتملة</span><strong>{completed ? '13' : '12'} <small>/ {lessons.length}</small></strong><small className="stat-foot">+ وحدة هذا الأسبوع</small></div></div><section className="skills-panel"><div className="card-heading"><div><span className="section-kicker">مهاراتك العملية</span><h3>أين أصبح أداؤك؟</h3></div><span className="sample-tag">بيانات نموذجية</span></div>{[{ label: 'فهم المصطلحات التقنية', value: 76, color: 'skill-green' }, { label: 'الكتابة الأكاديمية', value: 58, color: 'skill-coral' }, { label: 'التحدث بثقة', value: 43, color: 'skill-yellow' }, { label: 'شرح القرارات', value: 67, color: 'skill-dark' }].map((skill) => <div className="skill-row" key={skill.label}><span>{skill.label}</span><div className="skill-track"><i className={skill.color} style={{ width: `${skill.value}%` }} /></div><strong>{skill.value}%</strong></div>)}</section><button className="primary-button progress-cta" onClick={() => changeSection('today')}>ارجع لتحدي اليوم <ArrowLeft size={16} /></button></div>
+          <div className="page-content inner-page progress-page">
+            <div className="inner-page-heading"><span className="section-kicker">تقدّم مبني على جلساتك</span><h1>تقدّمك يتكلم.</h1><p>هذه الإحصاءات من الجلسات التي أكملتها والمحفوظة على هذا الجهاز.</p></div>
+            <div className="stats-grid">
+              <div className="stat-card"><span className="stat-icon mint-icon"><Flame size={19} /></span><span>أيام متتالية</span><strong>{currentStreak} <small>أيام</small></strong><small className="stat-foot">من سجل الجلسات المحلي</small></div>
+              <div className="stat-card"><span className="stat-icon yellow-icon"><Trophy size={19} /></span><span>نقاط الخبرة</span><strong>{xp.toLocaleString('en-US')} <small>XP</small></strong><small className="stat-foot">40 نقطة لأول إكمال لكل درس</small></div>
+              <div className="stat-card"><span className="stat-icon peach-icon"><Check size={19} /></span><span>دروس مكتملة</span><strong>{lessons.filter((lesson) => completedLessonIds.has(lesson.id)).length} <small>/ {lessons.length}</small></strong><small className="stat-foot">{learningSessions.length} جلسة مكتملة إجمالاً</small></div>
+            </div>
+            <section className="skills-panel history-panel">
+              <div className="card-heading"><div><span className="section-kicker">سجل التعلّم</span><h3>آخر جلساتك المكتملة</h3></div></div>
+              {recentSessions.length === 0
+                ? <p className="schedule-empty">لا توجد جلسات مكتملة بعد. ابدأ أي درس وأنهِ مهمته لتظهر هنا إحصاءاتك الحقيقية.</p>
+                : <div className="path-list">{recentSessions.map((session, index) => {
+                  const lesson = lessons.find((item) => item.id === session.lessonId) ?? (session.lessonId === dailyChallenge.id ? dailyChallenge : null)
+                  return <div className="path-list-card" key={`${session.completedAt}-${session.lessonId}-${index}`}>
+                    <span className={`lesson-icon ${lesson?.color ?? 'mint'}`}>{lesson ? <lesson.icon size={18} /> : <Check size={18} />}</span>
+                    <span className="path-list-copy"><strong>{lesson?.unit ?? 'درس مكتمل'}</strong><small>{lesson?.title ?? 'تدريب'}</small></span>
+                    <span className="path-list-progress">{new Intl.DateTimeFormat('ar-EG', { day: 'numeric', month: 'short' }).format(new Date(session.completedAt))}<br />{Math.round(session.elapsedSeconds / 60)} دقيقة</span>
+                  </div>
+                })}</div>}
+            </section>
+            <button className="primary-button progress-cta" onClick={() => changeSection('today')}>ارجع لتحدي اليوم <ArrowLeft size={16} /></button>
+          </div>
         )}
 
         <nav className="mobile-nav" aria-label="التنقل السفلي">{navItems.map(({ id, label, icon: Icon }) => <button key={id} className={section === id ? 'mobile-active' : ''} onClick={() => changeSection(id)}><Icon size={19} /><span>{label}</span></button>)}</nav>
