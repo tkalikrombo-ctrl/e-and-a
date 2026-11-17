@@ -21,7 +21,16 @@ npm run android:apk
 
 ينتج ملف Debug APK في `android/app/build/outputs/apk/debug/app-debug.apk`. هذه نسخة للاختبار وليست مخصصة للنشر على Google Play.
 
-يمكن بناء APK من GitHub Actions عبر **Build Android APK**. وعند إنشاء Tag ودفعه، ينشر Workflow الإصدار في GitHub Releases. تستخدم إصدارات Actions الحالية مفتاح Debug مؤقتاً؛ النشر العام وتحديثات التطبيق السلسة تتطلب مفتاح Release ثابتاً محفوظاً في GitHub Secrets.
+يمكن بناء التطبيقين من GitHub Actions عبر **Build Android and Windows apps**. وعند إنشاء Tag ودفعه، ينشر Workflow الإصدار في GitHub Releases. تستخدم إصدارات Actions الحالية مفتاح Debug مؤقتاً؛ النشر العام وتحديثات التطبيق السلسة تتطلب مفتاح Release ثابتاً محفوظاً في GitHub Secrets.
+
+## Windows
+
+ينشئ GitHub Actions تطبيق Windows محمولاً بصيغة `.exe` وينشره مع APK في صفحة GitHub Releases نفسها. حمّل `EA-Windows.exe` وشغّله مباشرة؛ لا يحتاج إلى تثبيت. التطبيق غير موقّع رقمياً، لذلك قد يعرض Windows تحذير SmartScreen؛ التوزيع التجاري يحتاج شهادة توقيع تطبيقات.
+
+## التنزيل
+
+- Android: [EA-Android.apk](https://github.com/tkalikrombo-ctrl/e-and-a/releases/latest/download/EA-Android.apk)
+- Windows x64: [EA-Windows.exe](https://github.com/tkalikrombo-ctrl/e-and-a/releases/latest/download/EA-Windows.exe)
 
 ## الميزات
 

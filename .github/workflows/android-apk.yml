@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android and Windows apps
 
 on:
   workflow_dispatch:
@@ -93,22 +93,64 @@ jobs:
             exit 1
           fi
           mkdir -p release
-          cp "$apk" "release/EA-${VERSION_NAME}.apk"
-          ls -l "release/EA-${VERSION_NAME}.apk"
+          cp "$apk" "release/EA-Android.apk"
+          ls -l "release/EA-Android.apk"
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v5
         with:
-          name: EA-APK-${{ env.VERSION_NAME }}
+          name: EA-Android-APK
           path: release/*.apk
           if-no-files-found: error
 
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Lint and build Windows app
+        run: |
+          npm run lint
+          npm run desktop:win
+
+      - name: Upload Windows app
+        uses: actions/upload-artifact@v5
+        with:
+          name: EA-Windows-App
+          path: release/*.exe
+          if-no-files-found: error
+
+  publish:
+    if: github.ref_type == 'tag'
+    needs: [build, windows]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download Android APK and Windows app
+        uses: actions/download-artifact@v5
+        with:
+          pattern: EA-*
+          path: release
+          merge-multiple: true
+
       - name: Publish GitHub Release
-        if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
           name: 'E&A ${{ github.ref_name }}'
           generate_release_notes: true
-          files: release/*.apk
+          files: release/*
           body: |
-            Android debug APK for direct testing. This build is not signed for Google Play distribution.
+            Android debug APK and portable Windows app for direct testing.
+            The Android APK is not signed for Google Play distribution.
